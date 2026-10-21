@@ -1,0 +1,1 @@
+﻿{ "name": "kamkam-staging-seed", "private": true, "type": "module", "scripts": { "seed": "node seed-staging.mjs" }, "dependencies": { "@supabase/supabase-js": "^2.118.0" } }

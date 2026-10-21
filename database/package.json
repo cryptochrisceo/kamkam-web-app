@@ -1,0 +1,13 @@
+{
+  "name": "kamkam-database",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OPTIONAL: runs a local PostgreSQL server from npm-packaged binaries (no system install). Use only if you have not installed PostgreSQL.",
+  "scripts": {
+    "start": "node start.mjs",
+    "reset": "node start.mjs --reset"
+  },
+  "dependencies": {
+    "embedded-postgres": "18.4.0-beta.17"
+  }
+}

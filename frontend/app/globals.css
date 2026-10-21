@@ -1,0 +1,51 @@
+@import 'tailwindcss';
+@import '@fontsource/manrope/400.css';
+@import '@fontsource/manrope/500.css';
+@import '@fontsource/manrope/600.css';
+@import '@fontsource/manrope/700.css';
+@import '@fontsource/manrope/800.css';
+@import '@fontsource/bricolage-grotesque/700.css';
+@import '@fontsource/bricolage-grotesque/800.css';
+
+/* KAMKAM design tokens (from the kam-kam-ui prototype) */
+@theme {
+  --color-kk-bg: #F5F7F4;
+  --color-kk-ink: #101410;
+  --color-kk-green: #14975C;
+  --color-kk-green-dark: #0E7546;
+  --color-kk-green-soft: #E8F5EE;
+  --color-kk-gold: #C98A12;
+  --color-kk-gold-dark: #8A5E08;
+  --color-kk-gold-soft: #FCF3E0;
+  --color-kk-muted: #6B7268;
+  --color-kk-faint: #9AA197;
+  --color-kk-red: #D0412F;
+  --font-sans: Manrope, system-ui, -apple-system, sans-serif;
+  --font-display: 'Bricolage Grotesque', Manrope, sans-serif;
+}
+
+* { box-sizing: border-box }
+body { margin: 0; background: #F5F7F4; font-family: Manrope, system-ui, -apple-system, sans-serif; color: #101410; -webkit-font-smoothing: antialiased }
+button { font: inherit; cursor: pointer; border: 0; background: none; color: inherit; padding: 0 }
+button:disabled { cursor: not-allowed }
+input, textarea, select { font: inherit; color: inherit }
+a { color: #14975C; text-decoration: none }
+a:hover { color: #0E7546 }
+::selection { background: #D6EEE0 }
+:focus-visible { outline: 2px solid #14975C; outline-offset: 2px; border-radius: 8px }
+::-webkit-scrollbar { width: 10px; height: 8px }
+::-webkit-scrollbar-thumb { background: rgba(16,20,16,.14); border-radius: 8px; border: 3px solid #F5F7F4 }
+
+@keyframes kkPop { 0% { transform: scale(.5); opacity: 0 } 65% { transform: scale(1.18) } 100% { transform: scale(1); opacity: 1 } }
+@keyframes kkUp { from { transform: translateY(8px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+@keyframes kkIn { from { transform: translateY(28px) scale(.97); opacity: 0 } to { transform: translateY(0) scale(1); opacity: 1 } }
+@keyframes kkFade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes kkRing { 0% { transform: scale(.9); opacity: .5 } 100% { transform: scale(2.6); opacity: 0 } }
+@keyframes kkSpark { 0% { transform: translate(0,0) scale(.3); opacity: 0 } 20% { opacity: 1 } 100% { transform: translate(var(--dx),var(--dy)) scale(1); opacity: 0 } }
+@keyframes kkBar { from { width: 0 } }
+@keyframes kkPulse { 0%,100% { opacity: 1 } 50% { opacity: .4 } }
+@keyframes kkShine { from { background-position: -320px 0 } to { background-position: 320px 0 } }
+@keyframes kkConfetti { 0% { transform: translate(0,0) rotate(0deg) scale(.3); opacity: 0 } 12% { opacity: 1 } 70% { opacity: 1 } 100% { transform: translate(var(--dx),var(--dy)) rotate(var(--rot)) scale(1); opacity: 0 } }
+@keyframes kkSpin { to { transform: rotate(360deg) } }
+
+.kk-skel { background: linear-gradient(90deg,#EEF2EC 0,#F7F9F6 40%,#EEF2EC 80%); background-size: 640px 100%; animation: kkShine 1.2s linear infinite; border-radius: 10px }

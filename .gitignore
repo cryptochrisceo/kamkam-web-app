@@ -1,0 +1,23 @@
+node_modules/
+.next/
+.next-*/
+dist/
+scratch-*.log
+scratch-next.*
+*.tsbuildinfo
+next-env.d.ts
+
+# secrets / local config — never commit
+.env
+.env.*
+!.env.example
+supabase/.temp/
+supabase/.branches/
+
+# local data & test tooling
+backend/uploads/
+database/data/
+supabase/tests/.bin/
+supabase/tests/.local-storage/
+supabase/tests/.local-stack.json
+.vercel/

@@ -1,0 +1,30 @@
+{
+  "name": "kamkam",
+  "version": "0.2.0",
+  "private": true,
+  "description": "KAMKAM — social media + creator gifts + ledger-backed wallet. Next.js frontend, Supabase backend.",
+  "scripts": {
+    "dev": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "start": "npm run start --prefix frontend",
+    "typecheck": "npm run typecheck --prefix frontend",
+    "install:all": "npm install && npm install --prefix frontend && npm install --prefix supabase/tests && npm install --prefix supabase/seed",
+
+    "test": "npm run test:db && npm run test:api && npm run test:routes",
+    "test:db": "npm run db:test --prefix supabase/tests",
+    "test:api": "node scripts/run-api-tests.mjs",
+    "test:routes": "node scripts/run-route-tests.mjs",
+    "db:bundles": "node supabase/tests/make-bundles.mjs && node supabase/tests/check-bundle.mjs",
+
+    "local:db": "npm install --prefix database && npm start --prefix database",
+    "local:postgrest": "node supabase/tests/get-postgrest.mjs",
+    "local:supabase": "node supabase/tests/local-stack.mjs --fresh",
+
+    "seed:staging": "npm run seed --prefix supabase/seed -- --yes",
+
+    "legacy:dev": "concurrently -k -n api,web -c green,yellow \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

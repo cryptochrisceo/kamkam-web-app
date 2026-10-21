@@ -1,0 +1,55 @@
+# Supabase CLI configuration for KAMKAM.
+# Used by `supabase link`, `supabase db push` and (with Docker) `supabase start`.
+# Hosted-project auth settings must ALSO be set in the dashboard — see docs/SUPABASE_SETUP.md.
+
+project_id = "kamkam"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[db.migrations]
+enabled = true
+
+[db.seed]
+enabled = false   # production starts empty; staging demo data: supabase/seed/seed-staging.mjs
+
+[realtime]
+enabled = true
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"   # per-bucket limits are set in migrations/20261016000600_storage.sql
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = [
+  "http://localhost:3000/auth/callback",
+  "http://localhost:3000/reset-password",
+]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+minimum_password_length = 8
+
+[auth.rate_limit]
+email_sent = 4
+sign_in_sign_ups = 30
+token_refresh = 150
+token_verifications = 30
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+double_confirm_changes = true
+secure_password_change = true
+max_frequency = "1m0s"

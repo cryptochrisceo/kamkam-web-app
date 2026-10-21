@@ -1,0 +1,487 @@
+// KAMKAM local MVP — PostgreSQL schema
+// Money is stored as Decimal (never float). NGN values use 2 dp, crypto 18 dp.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────── Enums ───────────────────────────
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+enum NotificationType {
+  FOLLOW
+  LIKE
+  COMMENT
+  REPOST
+  MESSAGE
+  GIFT_RECEIVED
+  WITHDRAWAL_COMPLETED
+  TRANSACTION_COMPLETED
+}
+
+enum TxType {
+  DEPOSIT
+  WITHDRAWAL
+  GIFT_SENT
+  GIFT_RECEIVED
+  BUY
+  SELL
+  SWAP
+  TRANSFER
+}
+
+enum TxStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum TxDirection {
+  IN
+  OUT
+}
+
+enum WithdrawalSource {
+  EARNINGS
+  WALLET
+}
+
+enum WithdrawalMethod {
+  KAMKAM_WALLET
+  EXTERNAL_WALLET
+  BANK
+}
+
+enum SellReceiveMethod {
+  NAIRA_BALANCE
+  BANK
+  WALLET_ASSET
+}
+
+// ─────────────────────────── Users ───────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  displayName  String
+  email        String   @unique
+  passwordHash String
+  avatar       String?
+  avatarColor  String   @default("#14975C")
+  bio          String?
+  verified     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile       Profile?
+  wallet        Wallet?
+  posts         Post[]
+  comments      Comment[]
+  likes         Like[]
+  reposts       Repost[]
+  bookmarks     Bookmark[]
+  following     Follow[]             @relation("follower")
+  followers     Follow[]             @relation("following")
+  notifications Notification[]       @relation("recipient")
+  actedNotifs   Notification[]       @relation("actor")
+  giftsSent     Gift[]               @relation("giftSender")
+  giftsReceived Gift[]               @relation("giftRecipient")
+  earnings      CreatorEarning[]
+  participants  ConversationMember[]
+  messages      Message[]
+  withdrawals   Withdrawal[]
+  deposits      Deposit[]
+  swaps         Swap[]
+  buys          BuyTransaction[]
+  sells         SellTransaction[]
+  transactions  WalletTransaction[]
+}
+
+model Profile {
+  id         String  @id @default(cuid())
+  userId     String  @unique
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location   String?
+  website    String?
+  coverImage String?
+  // Notification / privacy toggles from the Settings screen
+  settings   Json    @default("{}")
+}
+
+// ─────────────────────────── Social ───────────────────────────
+
+model Post {
+  id            String     @id @default(cuid())
+  authorId      String
+  author        User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  text          String
+  mediaUrls     String[]   @default([])
+  mediaType     MediaType?
+  replyPolicy   String     @default("Everyone")
+  likeCount     Int        @default(0)
+  commentCount  Int        @default(0)
+  repostCount   Int        @default(0)
+  giftCount     Int        @default(0)
+  superLikeCount Int       @default(0)
+  // Sum of creator share (80%) of all gifts on this post, in NGN
+  earnedNgn     Decimal    @default(0) @db.Decimal(20, 2)
+  boosted       Boolean    @default(false)
+  boostedUntil  DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  comments      Comment[]
+  likes         Like[]
+  reposts       Repost[]
+  bookmarks     Bookmark[]
+  gifts         Gift[]
+  notifications Notification[]
+
+  @@index([authorId, createdAt])
+  @@index([createdAt])
+  @@index([boosted, giftCount])
+}
+
+model Comment {
+  id        String    @id @default(cuid())
+  postId    String
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    Comment?  @relation("replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("replies")
+  text      String
+  createdAt DateTime  @default(now())
+
+  @@index([postId, createdAt])
+  @@index([authorId])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  superLike Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+  @@index([postId])
+}
+
+model Repost {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+  @@index([postId])
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+  @@index([userId, createdAt])
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  follower    User     @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String
+  following   User     @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followingId])
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation("recipient", fields: [userId], references: [id], onDelete: Cascade)
+  actorId     String?
+  actor       User?            @relation("actor", fields: [actorId], references: [id], onDelete: SetNull)
+  type        NotificationType
+  title       String
+  body        String
+  amountLabel String?
+  postId      String?
+  post        Post?            @relation(fields: [postId], references: [id], onDelete: SetNull)
+  read        Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, read])
+}
+
+// ─────────────────────────── Messaging ───────────────────────────
+
+model Conversation {
+  id        String               @id @default(cuid())
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  members   ConversationMember[]
+  messages  Message[]
+}
+
+model ConversationMember {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReadAt     DateTime     @default(now())
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  text           String
+  // "TEXT" or "GIFT" (gift receipts rendered in the thread)
+  kind           String       @default("TEXT")
+  meta           Json?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+// ─────────────────────────── Wallet ───────────────────────────
+
+model Wallet {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // true once the user completed the (client-side) recovery-phrase flow.
+  // The phrase itself is NEVER sent to or stored by the backend.
+  cryptoActivated   Boolean  @default(false)
+  // Creator earnings (80% share of gifts), held in NGN until withdrawn
+  earningsAvailable Decimal  @default(0) @db.Decimal(20, 2)
+  // Demo, non-derived addresses per network. Not real on-chain addresses.
+  demoAddresses     Json     @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  assets       WalletAsset[]
+  transactions WalletTransaction[]
+}
+
+model WalletAsset {
+  id        String   @id @default(cuid())
+  walletId  String
+  wallet    Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  symbol    String // NGN, USDT, BNB, ETH, SOL
+  balance   Decimal  @default(0) @db.Decimal(38, 18)
+  updatedAt DateTime @updatedAt
+
+  @@unique([walletId, symbol])
+}
+
+model WalletTransaction {
+  id           String      @id @default(cuid())
+  walletId     String
+  wallet       Wallet      @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         TxType
+  direction    TxDirection
+  asset        String
+  amount       Decimal     @db.Decimal(38, 18)
+  valueNgn     Decimal     @default(0) @db.Decimal(20, 2)
+  fee          Decimal     @default(0) @db.Decimal(38, 18)
+  feeAsset     String?
+  status       TxStatus    @default(COMPLETED)
+  // Shared by every record belonging to one operation (e.g. both sides of a gift)
+  reference    String
+  network      String?
+  counterparty String?
+  description  String
+  // Everything in this MVP is simulated — no blockchain / bank rails are touched.
+  simulated    Boolean     @default(true)
+  // Worker advances PENDING -> PROCESSING -> COMPLETED when true
+  autoSettle   Boolean     @default(false)
+  metadata     Json?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  completedAt  DateTime?
+
+  @@index([userId, createdAt])
+  @@index([reference])
+  @@index([status, autoSettle])
+}
+
+model Gift {
+  id               String   @id @default(cuid())
+  senderId         String
+  sender           User     @relation("giftSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId      String
+  recipient        User     @relation("giftRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  postId           String?
+  post             Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
+  amountNgn        Decimal  @db.Decimal(20, 2)
+  payAsset         String
+  payAmount        Decimal  @db.Decimal(38, 18)
+  rateNgn          Decimal  @db.Decimal(20, 2)
+  creatorAmountNgn Decimal  @db.Decimal(20, 2)
+  platformFeeNgn   Decimal  @db.Decimal(20, 2)
+  network          String?
+  reference        String   @unique
+  createdAt        DateTime @default(now())
+
+  earning     CreatorEarning?
+  platformFee PlatformFee?
+
+  @@index([recipientId, createdAt])
+  @@index([senderId, createdAt])
+  @@index([postId])
+}
+
+model CreatorEarning {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  giftId      String   @unique
+  gift        Gift     @relation(fields: [giftId], references: [id], onDelete: Cascade)
+  amountNgn   Decimal  @db.Decimal(20, 2)
+  sourceAsset String
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// KAMKAM's 20% platform share (and other platform fees)
+model PlatformFee {
+  id        String   @id @default(cuid())
+  source    String // GIFT, BUY, SELL, SWAP, WITHDRAWAL
+  amountNgn Decimal  @db.Decimal(20, 2)
+  reference String
+  giftId    String?  @unique
+  gift      Gift?    @relation(fields: [giftId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  @@index([source, createdAt])
+}
+
+model Withdrawal {
+  id            String           @id @default(cuid())
+  userId        String
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source        WithdrawalSource
+  method        WithdrawalMethod
+  asset         String
+  amount        Decimal          @db.Decimal(38, 18)
+  valueNgn      Decimal          @db.Decimal(20, 2)
+  fee           Decimal          @default(0) @db.Decimal(38, 18)
+  network       String?
+  address       String?
+  bankName      String?
+  accountNumber String?
+  accountName   String?
+  status        TxStatus         @default(PENDING)
+  reference     String           @unique
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  completedAt   DateTime?
+
+  @@index([userId, createdAt])
+}
+
+model Deposit {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset     String
+  amount    Decimal  @db.Decimal(38, 18)
+  method    String
+  status    TxStatus @default(COMPLETED)
+  reference String   @unique
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model Swap {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fromAsset   String
+  toAsset     String
+  fromAmount  Decimal  @db.Decimal(38, 18)
+  toAmount    Decimal  @db.Decimal(38, 18)
+  rate        Decimal  @db.Decimal(38, 18)
+  networkFee  Decimal  @db.Decimal(38, 18)
+  platformFee Decimal  @db.Decimal(38, 18)
+  network     String?
+  status      TxStatus @default(COMPLETED)
+  reference   String   @unique
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model BuyTransaction {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset         String
+  amount        Decimal  @db.Decimal(38, 18)
+  payAsset      String
+  payAmount     Decimal  @db.Decimal(38, 18)
+  rate          Decimal  @db.Decimal(38, 18)
+  fee           Decimal  @db.Decimal(38, 18)
+  paymentMethod String
+  status        TxStatus @default(COMPLETED)
+  reference     String   @unique
+  createdAt     DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model SellTransaction {
+  id            String            @id @default(cuid())
+  userId        String
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset         String
+  amount        Decimal           @db.Decimal(38, 18)
+  receiveMethod SellReceiveMethod
+  receiveAsset  String
+  receiveAmount Decimal           @db.Decimal(38, 18)
+  rate          Decimal           @db.Decimal(38, 18)
+  fee           Decimal           @db.Decimal(38, 18)
+  bankName      String?
+  accountNumber String?
+  accountName   String?
+  status        TxStatus          @default(COMPLETED)
+  reference     String            @unique
+  createdAt     DateTime          @default(now())
+
+  @@index([userId, createdAt])
+}

@@ -1,0 +1,13 @@
+{
+  "name": "kamkam-supabase-tests",
+  "private": true,
+  "type": "module",
+  "description": "Applies the Supabase migrations to a local PostgreSQL (with a Supabase shim) and tests RLS + money functions as two real users.",
+  "scripts": {
+    "db:test": "node run-db-tests.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "pg": "^8.13.1"
+  }
+}
