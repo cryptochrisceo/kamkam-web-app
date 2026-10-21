@@ -23,20 +23,29 @@ npm run build          # next build — must succeed with zero errors
 
 ## 2. Vercel project
 
-1. Push the repo to GitHub/GitLab (make sure `.env.local` is **not** committed — `.gitignore` covers it).
+0. **Database first:** if your Supabase project ran the older `APPLY_ALL_MIGRATIONS.sql`, run `supabase/UPGRADE_20261018_REAL_FINANCE.sql` in the SQL Editor before deploying. Without it, the wallet page errors.
+1. Push the repo to GitHub/GitLab. `.gitignore` keeps `.env.local` and the other `.env` files out of the commit.
 2. https://vercel.com/new → import the repo.
 3. **Root Directory:** `frontend` · Framework: **Next.js** (auto) · Build: `next build` · Output: default.
 4. **Environment Variables** (Settings → Environment Variables):
 
-| Name | Production | Preview |
+| Name | Value | Notes |
 |---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | production project URL | staging project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | production anon key | staging anon key |
-| `NEXT_PUBLIC_SHOW_DEMO_LOGIN` | `false` | `true` (optional) |
+| `NEXT_PUBLIC_SUPABASE_URL` | project URL | public |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon / publishable key | public |
+| `NEXT_PUBLIC_SHOW_DEMO_LOGIN` | `false` | |
+| `APP_URL` | `https://<your-domain or project>.vercel.app` | Paystack callback base |
+| `SUPABASE_SERVICE_ROLE_KEY` | service_role / secret key | **secret**: server routes only |
+| `CRON_SECRET` | long random string | secret |
+| `PAYSTACK_SECRET_KEY` | `sk_test_…` first | secret, optional |
+| `CDP_API_KEY_ID`, `CDP_API_KEY_SECRET`, `CDP_WALLET_SECRET` | from portal.cdp.coinbase.com | secret, optional |
+| `CRYPTO_NETWORK_MODE` | `testnet` | |
 
-Never add the `service_role` key or database password to Vercel.
+Server secrets are read only by `frontend/lib/server/*` (guarded by `server-only`) and never reach the browser. Never give them a `NEXT_PUBLIC_` prefix, and never add the database password. Without Paystack or CDP keys, those features show "Not available yet".
 
-5. Deploy. Then **Settings → Domains** → add your domain (e.g. `kamkam.app`) and follow the DNS instructions. HTTPS is automatic.
+5. Deploy. Then **Settings → Domains** → add your domain (e.g. `kamkam.app`) and follow the DNS instructions. HTTPS is automatic. If the domain changes, update `APP_URL` and redeploy.
+6. Paystack (once keys are set): Dashboard → Settings → API Keys & Webhooks → webhook URL `https://<domain>/api/payments/webhook`.
+7. Cron: `vercel.json` runs `/api/cron/reconcile` daily, the limit on Vercel Hobby. On Pro, change the schedule to `*/10 * * * *`.
 
 ## 3. Point Supabase Auth at the live URL
 
@@ -54,8 +63,8 @@ Use two real accounts (two browsers):
 1. Register → confirmation email arrives → link opens `/auth/callback` → signed in.
 2. Forgot password → email → `/reset-password` → new password works.
 3. Post with an image; edit it; poll; story; profile + cover photo upload.
-4. Second account: follow, like, reply, DM with a photo, gift ₦200 in Naira, create wallet, gift in USDT.
-5. First account: notifications arrive (instantly via Realtime), earnings show 80%, withdraw → Pending → Processing → Completed.
+4. New account shows ₦0 and no transactions. Second account: follow, like, reply, DM with a photo, start a live room and chat.
+5. With Paystack test keys: fund ₦500 with a test card, gift ₦200 (creator earns ₦160), withdraw to a test bank → Processing → Paid. See `docs/REAL_MONEY_SETUP.md` §5.
 6. Check the browser console has no errors and response headers include `Content-Security-Policy`.
 
 Only after this passes on the production domain is the site **live and verified**.

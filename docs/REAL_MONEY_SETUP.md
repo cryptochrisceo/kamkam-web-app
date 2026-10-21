@@ -63,7 +63,7 @@ comments is in `frontend/.env.example`.
 - Sends need native gas (ETH on Ethereum/Base, SOL on Solana) in the same account.
 
 **Reconciliation**
-- `vercel.json` schedules `/api/cron/reconcile` every 10 minutes. On Vercel Hobby, cron runs at most daily, so use Pro or an external scheduler that sends `Authorization: Bearer $CRON_SECRET`.
+- `vercel.json` schedules `/api/cron/reconcile` daily, the limit on Vercel Hobby. On Pro, change it to `*/10 * * * *`, or use an external scheduler that sends `Authorization: Bearer $CRON_SECRET`. Webhooks and the callback page settle payments in real time either way; the job is a safety net.
 - The job re-verifies pending deposits, payouts and crypto sends, and reports ledger mismatches.
 
 ## 5. Verify on staging (with test keys) before going live
