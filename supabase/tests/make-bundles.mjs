@@ -31,6 +31,19 @@ fs.writeFileSync(path.join(dir, '..', 'UPGRADE_20261018_REAL_FINANCE.sql'),
 -- It runs in a single transaction: if any statement fails, nothing changes.
 
 begin;
+
+-- Safety check: stop (and change nothing) if this has already been applied or the database isn't the expected one.
+do $$
+begin
+  if to_regclass('public.ngn_wallets') is not null then
+    raise exception 'KAMKAM: this upgrade has ALREADY been applied (public.ngn_wallets exists). Nothing to do — do not run it again.';
+  end if;
+  if to_regclass('public.profiles') is null or to_regclass('public.wallet_assets') is null then
+    raise exception 'KAMKAM: database is not in the expected state (profiles: %, wallet_assets: %). Nothing was changed.',
+      coalesce(to_regclass('public.profiles')::text, 'missing'), coalesce(to_regclass('public.wallet_assets')::text, 'missing');
+  end if;
+end $$;
+
 ` + join(upgrade) + '\ncommit;\n');
 
 console.log('Wrote APPLY_ALL_MIGRATIONS.sql (%d files) and UPGRADE_20261018_REAL_FINANCE.sql (%d files)', files.length, upgrade.length);

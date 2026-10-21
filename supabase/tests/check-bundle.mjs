@@ -42,6 +42,8 @@ try {
   const bal = (await c2.query(`select balance::text from public.ngn_wallets w join public.profiles p on p.id = w.user_id where p.username = 'legacy_user'`)).rows[0]?.balance;
   console.log('UPGRADE BUNDLE OK', { ...s, legacyDemoRowsBefore: before, archivedDemoRows: archived, legacyUserNewBalance: bal });
   if (archived !== before || bal !== '0.00' || s.demo_functions_left !== 0) { console.log('UPGRADE CHECK FAILED: archive/balance mismatch'); failed = true; }
+  try { await c2.query(read('UPGRADE_20261018_REAL_FINANCE.sql')); console.log('RERUN CHECK FAILED: second run did not stop'); failed = true; }
+  catch (e) { await c2.query('rollback').catch(() => {}); console.log('RERUN SAFE:', e.message.slice(0, 80)); }
 } catch (e) { console.log('UPGRADE BUNDLE FAILED:', e.message); failed = true; }
 await c2.end();
 process.exitCode = failed ? 1 : 0;
